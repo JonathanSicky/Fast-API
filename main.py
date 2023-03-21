@@ -1,9 +1,18 @@
-from flask import Flask, jsonify, make_response, request
-from flask_cors import CORS
+from fastapi import FastAPI, Response, status, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 import mysql.connector
 
-app = Flask(__name__)
-CORS(app)
+app = FastAPI()
+origins = ["*"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 myconnection = None
 mycursor = None
@@ -13,10 +22,10 @@ def connect():
     myconnection = mysql.connector.connect(host="localhost", user="root", password="", database="manageapi")
     mycursor = myconnection.cursor(dictionary=True)
 
-@app.route("/api/products", methods=["GET"])
-def get_products():
+@app.get("/api/products")
+def get_products(response: Response):
     connect()
-    
+
     mycursor.execute('SELECT * FROM `products`')
     mystringproducts = mycursor.fetchall()
 
@@ -42,11 +51,11 @@ def get_products():
         
     myconnection.close()
     mycursor.close()
-    return make_response(jsonify(products), 200)
+    response.status_code = status.HTTP_200_OK
+    return products
 
-
-@app.route("/api/products/<int:id>", methods=["GET"])
-def get_product(id):
+@app.get("/api/products/{id}")
+def get_product(id: int, response: Response):
     connect()
 
     myproducts = 'SELECT * FROM `products` WHERE `product_id` = %s'
@@ -60,7 +69,8 @@ def get_product(id):
     mystringcomponents = mycursor.fetchall()
 
     if mystringproducts is None:
-        return make_response(jsonify({"message": "ไม่มีสินค้าชิ้นนี้ในฐานข้อมูล"}), 404)
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"message": "ไม่มีสินค้าชิ้นนี้ในฐานข้อมูล"}
     else:
         result = {}
         result['product_id'] = mystringproducts['product_id']
@@ -81,11 +91,11 @@ def get_product(id):
         
         myconnection.close()
         mycursor.close()
-        return make_response(jsonify(result), 200)
+        response.status_code = status.HTTP_200_OK
+        return result
     
-@app.route("/api/product/insert", methods=["POST"])
-def insert_product():
-    data = request.get_json()
+@app.post("/api/product/insert")
+async def insert_product(data: dict):
     product_name = data.get("product_name")
     product_price = data.get("product_price")
     product_total = data.get("product_total")
@@ -93,56 +103,25 @@ def insert_product():
     component_name = data.get("component_name")
     component_type = data.get("component_type")
 
-    if not all([product_name, product_price, product_total, component_name, component_type]):
-        return make_response(jsonify({"message": "กรุณากรอกข้อมูลให้ครบถ้วนก่อนที่จะบันทึกลงฐานข้อมูล"}), 400)
-    try :
+    if not all([product_name, product_price, product_total]):
+        raise HTTPException(status_code=400, detail="กรุณากรอกข้อมูลให้ครบถ้วนก่อนที่จะบันทึกลงฐานข้อมูล")
+
+    try:
+        # Connect to database
         connect()
-        sql = "INSERT INTO `products` (product_name, product_price, product_total) VALUES (%s, %d, %d)"
+        
+        # Insert `products` table
+        sql = "INSERT INTO `products` (product_name, product_price, product_total) VALUES (%s, %s, %s)"
         val = (product_name, product_price, product_total)
         mycursor.execute(sql, val)
 
-        #
-        # Insert `products_component`
-        #
+        # Insert `products_component` table
 
+        # Commit changes and close connections
         myconnection.commit()
         mycursor.close()
         myconnection.close()
-        return make_response(jsonify({"message": "คุณได้เพิ่มสินค้าลงฐานข้อมูลเรียบร้อยแล้ว"}), 201)
+
+        return JSONResponse(content=jsonable_encoder({"message": "คุณได้เพิ่มสินค้าลงฐานข้อมูลเรียบร้อยแล้ว"}), status_code=201)
     except mysql.connector.Error as err:
-        return make_response(jsonify({"message": str(err)}), 500)
-    
-
-
-
-
-# @app.route("/api/products/create", methods=["POST"])
-# def create_product():
-#     data = request.get_json()
-#     product_name = data.get("product_name")
-#     product_total = data.get("product_total")
-#     if not all([product_name, product_total]):
-#         return make_response(jsonify({"message": "กรุณาระบุข้อมูลให้ครบถ้วน"}), 400)
-#     try:
-#         connect()
-        
-#         sql = "INSERT INTO products (product_name, product_total) VALUES (%s, %s)"
-#         val = (product_name, product_total)
-#         mycursor.execute(sql, val)
-#         myconnection.commit()
-#         mycursor.close()
-#         myconnection.close()
-#         return make_response(jsonify({"message": "คุณได้เพิ่มสินค้าลงฐานข้อมูลเรียบร้อยแล้ว"}), 201)
-#     except mysql.connector.Error as err:
-#         return make_response(jsonify({"message": str(err)}), 500)
-    
-# @app.route("/api/products/<id>", methods=['PUT'])
-# def Sicky_Update(id):
-#     connect()
-    
-#     sql = 'UPDATE `products` SET product_name = %s, product_total = %s WHERE product_id = %s'
-#     data = request.get_json()
-#     val = (data['product_name'], data['product_total'], id)
-#     mycursor.execute(sql, val)
-#     myconnection.commit()
-#     return make_response(jsonify({"message": "คุณได้อัพเดทสินค้าลงฐานข้อมูลเรียบร้อยแล้ว"}), 200)
+        raise HTTPException(status_code=500, detail=str(err))

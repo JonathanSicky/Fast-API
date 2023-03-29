@@ -1,7 +1,20 @@
+# Config FastAPI
 from fastapi import FastAPI, Response, status, HTTPException
+
+# Request API
+import requests
+
+# Share Port
 from fastapi.middleware.cors import CORSMiddleware
+
+# Config Json 
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
+
+# CreatedAt / UpdatedAt
+from datetime import datetime
+
+# Connection MySQL
 import mysql.connector
 
 app = FastAPI()
@@ -14,23 +27,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-myconnection = None
-mycursor = None
+mySQL = None
+myCursor = None
 
-def connect():
-    global myconnection, mycursor
-    myconnection = mysql.connector.connect(host="localhost", user="root", password="", database="manageapi")
-    mycursor = myconnection.cursor(dictionary=True)
+# Function Connect MySQL
+def mySQL_Connection():
+    global mySQL, myCursor
+    mySQL = mysql.connector.connect(host = "localhost", user = "root", password = "", database = "manageapi")
+    myCursor = mySQL.cursor(dictionary = True)
 
 @app.get("/api/products")
 def get_products(response: Response):
-    connect()
+    mySQL_Connection()
 
-    mycursor.execute('SELECT * FROM `products`')
-    mystringproducts = mycursor.fetchall()
+    myCursor.execute('SELECT * FROM `products`')
+    mystringproducts = myCursor.fetchall()
 
-    mycursor.execute('SELECT * FROM `products_component`')
-    mystringcomponents = mycursor.fetchall()
+    myCursor.execute('SELECT * FROM `products_component`')
+    mystringcomponents = myCursor.fetchall()
 
     products = []
     for product in mystringproducts:
@@ -38,6 +52,7 @@ def get_products(response: Response):
         product_dict['product_id'] = product['product_id']
         product_dict['product_name'] = product['product_name']
         product_dict['product_price'] = product['product_price']
+        product_dict['product_cost'] = product['product_cost']
         product_dict['product_total'] = product['product_total']
         product_dict['product_detail'] = []
 
@@ -49,24 +64,24 @@ def get_products(response: Response):
                 product_dict['product_detail'].append(component_dict)
         products.append(product_dict)
         
-    myconnection.close()
-    mycursor.close()
+    mySQL.close()
+    myCursor.close()
     response.status_code = status.HTTP_200_OK
     return products
 
 @app.get("/api/products/{id}")
 def get_product(id: int, response: Response):
-    connect()
+    mySQL_Connection()
 
     myproducts = 'SELECT * FROM `products` WHERE `product_id` = %s'
     val = (id, )
-    mycursor.execute(myproducts, val)
-    mystringproducts = mycursor.fetchone()
+    myCursor.execute(myproducts, val)
+    mystringproducts = myCursor.fetchone()
 
     mycomponents = 'SELECT * FROM `products_component` WHERE `component_id` = %s'
     val = (id, )
-    mycursor.execute(mycomponents, val)
-    mystringcomponents = mycursor.fetchall()
+    myCursor.execute(mycomponents, val)
+    mystringcomponents = myCursor.fetchall()
 
     if mystringproducts is None:
         response.status_code = status.HTTP_404_NOT_FOUND
@@ -89,12 +104,12 @@ def get_product(id: int, response: Response):
         else:
             result['product_component'] = None
         
-        myconnection.close()
-        mycursor.close()
+        mySQL.close()
+        myCursor.close()
         response.status_code = status.HTTP_200_OK
         return result
     
-@app.post("/api/product/insert")
+@app.post("/api/product/post")
 async def insert_product(data: dict):
     product_name = data.get("product_name")
     product_price = data.get("product_price")
@@ -108,19 +123,19 @@ async def insert_product(data: dict):
 
     try:
         # Connect to database
-        connect()
+        mySQL_Connection()
         
         # Insert `products` table
         sql = "INSERT INTO `products` (product_name, product_price, product_total) VALUES (%s, %s, %s)"
         val = (product_name, product_price, product_total)
-        mycursor.execute(sql, val)
+        myCursor.execute(sql, val)
 
         # Insert `products_component` table
 
         # Commit changes and close connections
-        myconnection.commit()
-        mycursor.close()
-        myconnection.close()
+        mySQL.commit()
+        myCursor.close()
+        mySQL.close()
 
         return JSONResponse(content=jsonable_encoder({"message": "คุณได้เพิ่มสินค้าลงฐานข้อมูลเรียบร้อยแล้ว"}), status_code=201)
     except mysql.connector.Error as err:

@@ -11,9 +11,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-# CreatedAt / UpdatedAt
-from datetime import datetime
-
 # Connection MySQL
 import mysql.connector
 
@@ -114,11 +111,12 @@ async def insert_product(data: dict):
     product_name = data.get("product_name")
     product_price = data.get("product_price")
     product_total = data.get("product_total")
+    product_cost = data.get("product_cost")
 
     component_name = data.get("component_name")
     component_type = data.get("component_type")
 
-    if not all([product_name, product_price, product_total]):
+    if not all([product_name, product_price, product_total, product_cost]):
         raise HTTPException(status_code=400, detail="กรุณากรอกข้อมูลให้ครบถ้วนก่อนที่จะบันทึกลงฐานข้อมูล")
 
     try:
@@ -126,11 +124,14 @@ async def insert_product(data: dict):
         mySQL_Connection()
         
         # Insert `products` table
-        sql = "INSERT INTO `products` (product_name, product_price, product_total) VALUES (%s, %s, %s)"
+        insertproducts = "INSERT INTO `products` (product_name, product_price, product_total, product_cost) VALUES (%s, %s, %s, %d)"
         val = (product_name, product_price, product_total)
-        myCursor.execute(sql, val)
+        myCursor.execute(insertproducts, val)
 
         # Insert `products_component` table
+        # insertcomponents = "INSERT INTO `products_component` (component_name, component_type) VALUES (%s, %d)"
+        # val = (component_name, component_type)
+        # myCursor.execute(insertcomponents, val)
 
         # Commit changes and close connections
         mySQL.commit()

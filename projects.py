@@ -1,9 +1,12 @@
 import mysql.connector
 
+
 def mySQL_Connection():
-    mySQL = mysql.connector.connect(host = "localhost", user = "root", password = "", database = "manageapi")
-    myCursor = mySQL.cursor(dictionary = True)
+    mySQL = mysql.connector.connect(
+        host="localhost", user="root", password="", database="manageapi")
+    myCursor = mySQL.cursor(dictionary=True)
     return mySQL, myCursor
+
 
 def get_projects():
     mySQL, myCursor = mySQL_Connection()
@@ -50,8 +53,8 @@ def get_projects():
 #                 component_dict['component_type'] = component['component_type']
 #                 product_dict['product_detail'].append(component_dict)
 #         products.append(product_dict)
-        
+
 #     mySQL.close()
 #     myCursor.close()
-    
+
 #     return products

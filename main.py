@@ -1,21 +1,17 @@
-# Config FastAPI
+
 from fastapi import FastAPI, Response, status, HTTPException
 
-# Request API
 import requests
 
-# Share Port
 from fastapi.middleware.cors import CORSMiddleware
 
-# Config Json 
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-# Connection MySQL
 import mysql.connector
 
-from product import get_projects, mySQL_Connection
-from productid import get_productid
+from projects import get_projects, mySQL_Connection
+from projectid import get_projectid
 
 app = FastAPI()
 origins = ["*"]
@@ -27,14 +23,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/api/projects")
-def read_products():
-    products = get_projects()
-    return JSONResponse(content=jsonable_encoder(products))
-
-# @app.get("/api/products/{id}")
-# def read_product(id: int, response: Response):
-#     return get_productid(id, response)
 
 @app.post("/api/projects/post")
 async def insert_user(data: dict):
@@ -43,8 +31,9 @@ async def insert_user(data: dict):
     Project_key = data.get("API_KEY")
     Project_section = data.get("PROJECT_SECTION")
 
-    if not all ([Project_name, Project_api, Project_key, Project_section]):
-        raise HTTPException(status_code=400, detail="กรุณากรอกข้อมูลให้ครบถ้วนก่อนที่จะบันทึกลงฐานข้อมูล")
+    if not all([Project_name, Project_api, Project_key, Project_section]):
+        raise HTTPException(
+            status_code=400, detail="กรุณากรอกข้อมูลให้ครบถ้วนก่อนที่จะบันทึกลงฐานข้อมูล")
     try:
         mySQL, myCursor = mySQL_Connection()
 
@@ -55,6 +44,17 @@ async def insert_user(data: dict):
         mySQL.commit()
         mySQL.close()
         myCursor.close()
-        return JSONResponse(content=jsonable_encoder({"message" : "คุณได้บันทึกลงฐานข้อมูลเรียบร้อยแล้ว"}))
+        return JSONResponse(content=jsonable_encoder({"message": "คุณได้บันทึกลงฐานข้อมูลเรียบร้อยแล้ว"}))
     except mysql.connector.Error as err:
         raise HTTPException(status_code=500, detail=str(err))
+
+
+@app.get("/api/projects")
+def read_products():
+    products = get_projects()
+    return JSONResponse(content=jsonable_encoder(products))
+
+
+@app.get("/api/projects/{id}")
+def read_product(id: int, response: Response):
+    return get_projectid(id, response)

@@ -29,10 +29,10 @@ app.add_middleware(
 
 @app.post("/api/projects/post")
 async def insert_user(data: dict):
-    Project_name = data.get("PROJECT_NAME")
-    Project_api = data.get("API_URL")
-    Project_key = data.get("API_KEY")
-    Project_section = data.get("PROJECT_SECTION")
+    Project_name = data.get("project_name")
+    Project_api = data.get("api_url")
+    Project_key = data.get("api_key")
+    Project_section = data.get("project_section")
 
     if not all([Project_name, Project_api, Project_key, Project_section]):
         raise HTTPException(

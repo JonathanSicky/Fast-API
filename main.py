@@ -14,6 +14,7 @@ from projects import get_projects, mySQL_Connection
 from projectid import get_projectid
 
 from eaccoms import get_eaccoms
+# from eaccomsid import get_eaccomid
 
 app = FastAPI()
 origins = ["*"]
@@ -67,3 +68,7 @@ async def get_rooms():
     response = requests.get(url)
     data = response.json()
     return data
+
+# @app.get("/api/accoms/rooms/{id}")
+# def read_room(id: int, response: Response):
+#     return get_roomid(id, response)

@@ -13,6 +13,8 @@ import mysql.connector
 from projects import get_projects, mySQL_Connection
 from projectid import get_projectid
 
+from eaccoms import get_eaccoms
+
 app = FastAPI()
 origins = ["*"]
 app.add_middleware(
@@ -58,3 +60,10 @@ def read_products():
 @app.get("/api/projects/{id}")
 def read_product(id: int, response: Response):
     return get_projectid(id, response)
+
+@app.get("/api/accoms/rooms")
+async def get_rooms():
+    url = "https://demo.eaccom.net/api/v1/room/"
+    response = requests.get(url)
+    data = response.json()
+    return data
